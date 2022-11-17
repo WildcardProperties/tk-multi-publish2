@@ -1308,7 +1308,10 @@ class AppDialog(QtGui.QWidget):
         """
         Update task statuses
         """
-        self.ui.context_widget.update_task_status()
+        try:
+            self.ui.context_widget.update_task_status()
+        except:
+            pass
 
 
     def _publish_again_clicked(self):
