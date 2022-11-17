@@ -1296,10 +1296,20 @@ class AppDialog(QtGui.QWidget):
                 # ignore all errors. ex: using a core that doesn't support metrics
                 pass
 
+            # Update task statuses
+            self._update_task_status()
+
             self._progress_handler.logger.info(
                 "Publish Complete! For details, click here."
             )
             self._overlay.show_success()
+
+    def _update_task_status(self):
+        """
+        Update task statuses
+        """
+        self.ui.context_widget.update_task_status()
+
 
     def _publish_again_clicked(self):
         """
