@@ -42,6 +42,11 @@ class PublishScreenshots():
                 if os.path.exists(self.screenshots_path):
                     file_list = sorted(glob.glob('%s/*.png' % self.screenshots_path), reverse=True)
                     return file_list
+                else:
+                    msg = "Unable to find the UE5 screenshots folder: {}".format(self.screenshots_path)
+                    print("msg")
+                    logger.debug(msg)
+
             except:
                 msg = "Error locating the UE5 screenshots folder: {}".format(self.screenshots_path)
                 print("msg")
