@@ -19,6 +19,7 @@ from .ui.dialog import Ui_Dialog
 from .progress import ProgressHandler
 from .summary_overlay import SummaryOverlay
 from .publish_tree_widget import TreeNodeItem, TreeNodeTask, TopLevelTreeNodeItem
+from .publish_screenshots import PublishScreenshots
 
 # import frameworks
 settings = sgtk.platform.import_framework("tk-framework-shotgunutils", "settings")
@@ -199,6 +200,9 @@ class AppDialog(QtGui.QWidget):
         self._browse_menu.addAction(self._browse_file_action)
         self._browse_menu.addAction(self._browse_folder_action)
 
+        # Publish screenshots
+        self.publish_screenshots = PublishScreenshots()
+
         # browse tool button
         self.ui.browse.clicked.connect(self._on_browse)
         self.ui.browse.setMenu(self._browse_menu)
@@ -266,6 +270,9 @@ class AppDialog(QtGui.QWidget):
 
         # run collections
         self._full_rebuild()
+
+        # Display screenshots if they exist
+        self._display_screenshots()
 
     @property
     def manual_load_enabled(self):
@@ -1571,6 +1578,16 @@ class AppDialog(QtGui.QWidget):
 
         # Make the task validation if the setting `task_required` exists and it's True
         self._validate_task_required()
+
+    def _display_screenshots(self):
+        """
+        Display screenshots
+        """
+        # process the browsed files/folders for publishing
+        paths = self.publish_screenshots.list_files()
+        if paths:
+            # simulate dropping the files into the dialog
+            self._on_drop(paths)
 
     def _on_browse(self, folders=False):
         """Opens a file dialog to browse to files for publishing."""
