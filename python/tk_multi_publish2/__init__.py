@@ -27,6 +27,9 @@ def show_dialog(app):
 
     display_name = sgtk.platform.current_bundle().get_setting("display_name")
 
+    synclog = app.engine.sgtk.synchronize_filesystem_structure()
+    app.log_debug(f"Synced Folders: {synclog}")
+
     if app.pre_publish_hook.validate():
         # start ui
         if app.modal:
