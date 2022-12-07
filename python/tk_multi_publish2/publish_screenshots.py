@@ -51,4 +51,5 @@ class PublishScreenshots():
                 msg = "Error locating the UE5 screenshots folder: {}".format(self.screenshots_path)
                 print("msg")
                 logger.debug(msg)
+                pass
         return None
