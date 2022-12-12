@@ -17,6 +17,13 @@ class PublishScreenshots():
     def __init__(self):
         self.current_unreal_project = None
         self.screenshots_path = None
+        self.bundle = sgtk.platform.current_bundle()
+        self.project = self.bundle.context.project
+        self.context = self.bundle.context
+        self.entity = self.bundle.context.entity
+        logger.info("Project is {}".format(self.project))
+        logger.info("context is {}".format(self.context))
+        logger.info("entity is {}".format(self.entity))
 
     def list_files(self):
         """
@@ -25,7 +32,7 @@ class PublishScreenshots():
         """
         engine_name = sgtk.platform.current_engine().name
         msg = "Engine is: {}".format(engine_name)
-        logger.debug(msg)
+        logger.info(msg)
         print(msg)
 
         if engine_name == "tk-unreal":
