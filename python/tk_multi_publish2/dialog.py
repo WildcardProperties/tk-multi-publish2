@@ -13,6 +13,7 @@ import traceback
 import sgtk
 from sgtk.platform.qt import QtCore, QtGui
 from tank_vendor import six
+from collections import defaultdict, OrderedDict
 
 from .api import PublishManager, PublishItem, PublishTask
 from .ui.dialog import Ui_Dialog
@@ -20,6 +21,8 @@ from .progress import ProgressHandler
 from .summary_overlay import SummaryOverlay
 from .publish_tree_widget import TreeNodeItem, TreeNodeTask, TopLevelTreeNodeItem
 from .publish_screenshots import PublishScreenshots
+from . import util
+
 
 # import frameworks
 settings = sgtk.platform.import_framework("tk-framework-shotgunutils", "settings")
@@ -273,6 +276,11 @@ class AppDialog(QtGui.QWidget):
 
         # Display screenshots if they exist
         self._display_screenshots()
+        self._display_publish_name()
+
+        self.publish_dict = defaultdict()
+        self._intialize_item_publish_versions()
+
 
     @property
     def manual_load_enabled(self):
@@ -524,7 +532,9 @@ class AppDialog(QtGui.QWidget):
         publish comments box in the overview details pane
         """
         tree_widget = self.ui.items_tree
-        comments = self.ui.item_comments.toPlainText()
+        comments = ""
+        if self.ui.item_comments:
+            comments = self.ui.item_comments.toPlainText()
         # if this is the summary description...
         if self._current_item is None:
             if self._summary_comment != comments:
@@ -567,6 +577,131 @@ class AppDialog(QtGui.QWidget):
                 # This will set all child items that inherit descriptions to the same description.
                 node_item.set_description(description)
                 self._set_description_inheritance_ui(node_item)
+
+        engine_name = sgtk.platform.current_engine().name
+        if engine_name == "tk-unreal":
+            self._create_versioned_publish(self._current_item, comments)
+
+    def _create_versioned_publish(self, item, description):
+        """
+        Create versioned publish name
+        """
+        versionless_publish_name = self._create_versionless_publish_name(item.context, description)
+
+        versionless_publish_name_ext = "{}.png".format(versionless_publish_name)
+
+        if versionless_publish_name in self.publish_dict:
+            max_version = 0
+
+            if item.name not in self.publish_dict[versionless_publish_name]:
+                if len(self.publish_dict[versionless_publish_name]) >= 1:
+                    for k, v in self.publish_dict[versionless_publish_name].items():
+                        max_version = max(v, max_version)
+                    next_version = max_version + 1
+                    self.publish_dict[versionless_publish_name][item.name] = next_version
+                else:
+                    next_version = util.get_next_version(item, versionless_publish_name_ext)
+                    self.publish_dict[versionless_publish_name][item.name] = next_version
+
+            else:
+                next_version = self.publish_dict[versionless_publish_name][item.name]
+
+        else:
+            # Delete old key from self.publish_dict and update others
+            if "versionless_publish_name" in item.properties:
+                target_name = item.properties["versionless_publish_name"]
+                # logger.info("target_name is : %s." % target_name)
+                # logger.info("versionless_publish_name is : %s." % versionless_publish_name)
+                if versionless_publish_name != target_name:
+                    if target_name in self.publish_dict:
+                        logger.info("self.publish_dict[target_name] is : %s." % self.publish_dict[target_name])
+                        if item.name in self.publish_dict[target_name]:
+                            removed_version = self.publish_dict[target_name][item.name]
+                            logger.info("removed_version is : %d." % removed_version)
+                            del self.publish_dict[target_name][item.name]
+                            for key, value in self.publish_dict[target_name].items():
+                                if value > removed_version:
+                                    value -= 1
+                                    self.publish_dict[target_name][key] = value
+
+            self.publish_dict[versionless_publish_name] = defaultdict(int)
+            next_version = util.get_next_version(item, versionless_publish_name_ext)
+            self.publish_dict[versionless_publish_name][item.name] = next_version
+
+        # logger.info("Getting publish name for version_number: %d" % next_version)
+        publish_name = "{}.v{}.png".format(versionless_publish_name, str(next_version))
+        logger.info("publish name is: %s" % publish_name)
+        self.ui.context_widget.set_publish_name(publish_name)
+        item.properties["versionless_publish_name"] = versionless_publish_name
+        item.properties["publish_name"] = publish_name
+        item.properties["publish_version"] = next_version
+
+        logger.info("item versionless publish_name is : %s." % item.properties["versionless_publish_name"])
+        logger.info("item publish_name is : %s." % item.properties["publish_name"])
+        logger.info("item publish_version is : %s." % item.properties["publish_version"])
+        logger.info("self.publish_dict is : %s." % self.publish_dict)
+
+        return publish_name
+
+    def _create_versionless_publish_name(self, context, description):
+        """
+        Create the versionless publish name
+        """
+        #self._bundle = sgtk.platform.current_bundle()
+        #logger.info("Project bundle name: %s" % self._bundle.context.project["name"])
+        # project = self._bundle.context.project
+
+        project = context.project
+        # logger.info("project is: %s" % project)
+        self._project_name = project["name"]
+        logger.info("Project name: %s" % self._project_name)
+        publish_name = ""
+        if self._project_name:
+            publish_name = "{}".format(self._project_name)
+        else:
+            publish_name = ""
+
+        if context:
+            if context.entity:
+                publish_name = "{}_{}".format(publish_name, context.entity["name"])
+            if context.task:
+                publish_name = "{}_{}".format(publish_name, context.task["name"])
+
+        if description:
+            publish_name = "{}_{}".format(publish_name, description)
+
+        #publish_name = "{}.png".format(publish_name)
+
+        logger.info("versionless publish name is: %s" % publish_name)
+        return publish_name
+
+    def _update_item_publish_versions(self):
+        """
+        Update item publish versions if needed as modified versionless_publish_name
+        may cause version gaps
+        """
+        for item in self._publish_manager.tree.root_item.children:
+            if "versionless_publish_name" in item.properties:
+                versionless_publish_name = item.properties["versionless_publish_name"]
+                if versionless_publish_name in self.publish_dict:
+                    version = 1
+                    for key, value in self.publish_dict[versionless_publish_name].items():
+                        if key == item.name:
+                            version = value
+                            break
+                    if item.properties["publish_version"] != version:
+                        original_publish_name = item.properties["publish_name"]
+                        publish_name = "{}.v{}.png".format(versionless_publish_name, str(version))
+                        item.properties["publish_name"] = publish_name
+                        item.properties["publish_version"] = version
+                        logger.info("Updating publish name of item: %s from %s to %s" % (item.name, original_publish_name, publish_name))
+
+    def _intialize_item_publish_versions(self):
+        """
+        itinialize item publish versions
+        """
+        for item in self._publish_manager.tree.root_item.children:
+            self._create_versioned_publish(item, "")
 
     def _on_description_inherited_link_activated(self, _link):
         """
@@ -690,6 +825,16 @@ class AppDialog(QtGui.QWidget):
 
             # set the context
             self.ui.context_widget.set_context(item.context)
+            description = ""
+            if item.description:
+                description = item.description.toPlainText()
+
+            engine_name = sgtk.platform.current_engine().name
+            if engine_name == "tk-unreal":
+                self._create_versioned_publish(item, description)
+            #if "publish_name" in item.properties:
+            #    self.ui.context_widget.set_publish_name(item.properties["publish_name"])
+
         else:
             self.ui.context_widget.hide()
 
@@ -781,6 +926,9 @@ class AppDialog(QtGui.QWidget):
 
         # iterate over all the tree items to find currently used contexts
         current_contexts = {}
+        description = ""
+        if self.ui.item_comments:
+            description = self.ui.item_comments.toPlainText()
         for it in QtGui.QTreeWidgetItemIterator(self.ui.items_tree):
             item = it.value()
             publish_instance = item.get_publish_instance()
@@ -801,6 +949,9 @@ class AppDialog(QtGui.QWidget):
                 task_display_override=" -- Multiple values -- ",
                 link_display_override=" -- Multiple values -- ",
             )
+            publish_name = self._create_versionless_publish_name(None, description)
+            self.ui.context_widget.set_publish_name(publish_name)
+
             context_label_text = (
                 "Currently publishing items to %s contexts. "
                 "Override all items here:" % (len(current_contexts),)
@@ -1174,6 +1325,9 @@ class AppDialog(QtGui.QWidget):
 
         # hide the action buttons during publish
         self.ui.button_container.hide()
+
+        # Update item publish versions if needed
+        self._update_item_publish_versions()
 
         # Make sure that settings from the current selection are retrieved from the UI and applied
         # back on the tasks.
@@ -1588,6 +1742,14 @@ class AppDialog(QtGui.QWidget):
         if paths:
             # simulate dropping the files into the dialog
             self._on_drop(paths)
+
+    def _display_publish_name(self):
+        """
+        Show potential publish name widget in Unreal
+        """
+        engine_name = sgtk.platform.current_engine().name
+        if engine_name == "tk-unreal":
+            self.ui.context_widget.display_publish_name()
 
     def _on_browse(self, folders=False):
         """Opens a file dialog to browse to files for publishing."""

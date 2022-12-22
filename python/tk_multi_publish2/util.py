@@ -10,6 +10,7 @@
 
 import os
 import pprint
+import re
 
 import sgtk
 
@@ -68,6 +69,41 @@ def get_next_version_path(path):
         "path_info", "get_next_version_path", path=path
     )
 
+
+def get_next_version(item, publish_name):
+    """
+    Get next version
+    """
+    # See how many prior versions there are
+    filters = [
+        ['entity', 'is', get_version_entity(item)]
+    ]
+
+    publisher = sgtk.platform.current_bundle()
+    prior_versions = publisher.shotgun.find("Version", filters, ['code'])
+    # logger.info("prior_versions: %s" % prior_versions)
+
+    regex = r"(" + re.escape(publish_name.split('.')[0]) + r"){1}(\.v\d)?\.\w*$"
+
+    x = [i for i in prior_versions if re.match(regex, i['code'])]
+    # logger.info("x: %s" % x)
+
+    # Set the publish name of this item as the next version
+    version_number = len(x) + 1
+    logger.info("next version_number is: %s" % version_number)
+    return version_number
+
+
+def get_version_entity(item):
+    """
+    Returns the best entity to link the version to.
+    """
+    if item.context.entity:
+        return item.context.entity
+    elif item.context.project:
+        return item.context.project
+    else:
+        return None
 
 def get_file_path_components(path):
     """
