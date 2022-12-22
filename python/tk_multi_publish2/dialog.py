@@ -700,8 +700,10 @@ class AppDialog(QtGui.QWidget):
         """
         itinialize item publish versions
         """
-        for item in self._publish_manager.tree.root_item.children:
-            self._create_versioned_publish(item, "")
+        engine_name = sgtk.platform.current_engine().name
+        if engine_name == "tk-unreal":
+            for item in self._publish_manager.tree.root_item.children:
+                self._create_versioned_publish(item, "")
 
     def _on_description_inherited_link_activated(self, _link):
         """
