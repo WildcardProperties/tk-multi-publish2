@@ -90,7 +90,7 @@ def get_next_version(item, publish_name):
 
     # Set the publish name of this item as the next version
     version_number = len(x) + 1
-    logger.info("next version_number is: %s" % version_number)
+    #logger.info("next version_number is: %s" % version_number)
     return version_number
 
 

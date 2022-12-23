@@ -13,7 +13,8 @@ import traceback
 import sgtk
 from sgtk.platform.qt import QtCore, QtGui
 from tank_vendor import six
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
+import time
 
 from .api import PublishManager, PublishItem, PublishTask
 from .ui.dialog import Ui_Dialog
@@ -86,6 +87,8 @@ class AppDialog(QtGui.QWidget):
         # only allow entities that can be linked to PublishedFile entities
         self.ui.context_widget.restrict_entity_types_by_link("PublishedFile", "entity")
 
+        self._engine_name = sgtk.platform.current_engine().name
+
         # tooltips for the task and link inputs
         self.ui.context_widget.set_task_tooltip(
             "<p>The task that the selected item will be associated with "
@@ -147,10 +150,10 @@ class AppDialog(QtGui.QWidget):
         )
 
         # Publish Token
-        engine_name = sgtk.platform.current_engine().name
-        if engine_name == "tk-unreal":
+        if self._engine_name == "tk-unreal":
             self.publish_token = self.ui.context_widget.ui.publish_token_display
             self.publish_token.textChanged.connect(self._on_publish_token_change)
+            self.publish_token.editingFinished.connect(self._on_publish_token_finished)
 
         # selection in tree view
         self.ui.items_tree.itemSelectionChanged.connect(
@@ -586,12 +589,15 @@ class AppDialog(QtGui.QWidget):
 
     def _on_publish_token_change(self):
         token = self.publish_token.text()
-
-        logger.info("token is : %s." % token)
         self._current_item.properties["token"] = token
+        if self._engine_name == "tk-unreal":
+            if len(token) % 3 == 0:
+                self._create_versioned_publish(self._current_item, token)
 
-        engine_name = sgtk.platform.current_engine().name
-        if engine_name == "tk-unreal":
+    def _on_publish_token_finished(self):
+        token = self.publish_token.text()
+        self._current_item.properties["token"] = token
+        if self._engine_name == "tk-unreal":
             self._create_versioned_publish(self._current_item, token)
 
     def _create_versioned_publish(self, item, description):
@@ -606,14 +612,13 @@ class AppDialog(QtGui.QWidget):
             max_version = 0
 
             if item.name not in self.publish_dict[versionless_publish_name]:
-                if len(self.publish_dict[versionless_publish_name]) >= 1:
+                if len(self.publish_dict[versionless_publish_name]) > 0:
                     for k, v in self.publish_dict[versionless_publish_name].items():
                         max_version = max(v, max_version)
                     next_version = max_version + 1
-                    self.publish_dict[versionless_publish_name][item.name] = next_version
                 else:
                     next_version = util.get_next_version(item, versionless_publish_name_ext)
-                    self.publish_dict[versionless_publish_name][item.name] = next_version
+                self.publish_dict[versionless_publish_name][item.name] = next_version
 
             else:
                 next_version = self.publish_dict[versionless_publish_name][item.name]
@@ -626,10 +631,10 @@ class AppDialog(QtGui.QWidget):
                 # logger.info("versionless_publish_name is : %s." % versionless_publish_name)
                 if versionless_publish_name != target_name:
                     if target_name in self.publish_dict:
-                        logger.info("self.publish_dict[target_name] is : %s." % self.publish_dict[target_name])
+                        #logger.info("self.publish_dict[target_name] is : %s." % self.publish_dict[target_name])
                         if item.name in self.publish_dict[target_name]:
                             removed_version = self.publish_dict[target_name][item.name]
-                            logger.info("removed_version is : %d." % removed_version)
+                            #logger.info("removed_version is : %d." % removed_version)
                             del self.publish_dict[target_name][item.name]
                             for key, value in self.publish_dict[target_name].items():
                                 if value > removed_version:
@@ -642,16 +647,16 @@ class AppDialog(QtGui.QWidget):
 
         # logger.info("Getting publish name for version_number: %d" % next_version)
         publish_name = "{}.v{}.png".format(versionless_publish_name, str(next_version))
-        logger.info("publish name is: %s" % publish_name)
+        #logger.info("publish name is: %s" % publish_name)
         self.ui.context_widget.set_publish_name(publish_name)
         item.properties["versionless_publish_name"] = versionless_publish_name
         item.properties["publish_name"] = publish_name
         item.properties["publish_version"] = next_version
 
-        logger.info("item versionless publish_name is : %s." % item.properties["versionless_publish_name"])
-        logger.info("item publish_name is : %s." % item.properties["publish_name"])
-        logger.info("item publish_version is : %s." % item.properties["publish_version"])
-        logger.info("self.publish_dict is : %s." % self.publish_dict)
+        #logger.info("item versionless publish_name is : %s." % item.properties["versionless_publish_name"])
+        #logger.info("item publish_name is : %s." % item.properties["publish_name"])
+        #logger.info("item publish_version is : %s." % item.properties["publish_version"])
+        #logger.info("self.publish_dict is : %s." % self.publish_dict)
 
         return publish_name
 
@@ -659,14 +664,11 @@ class AppDialog(QtGui.QWidget):
         """
         Create the versionless publish name
         """
-        #self._bundle = sgtk.platform.current_bundle()
-        #logger.info("Project bundle name: %s" % self._bundle.context.project["name"])
-        # project = self._bundle.context.project
 
         project = context.project
         # logger.info("project is: %s" % project)
         self._project_name = project["name"]
-        logger.info("Project name: %s" % self._project_name)
+        #logger.info("Project name: %s" % self._project_name)
         publish_name = ""
         if self._project_name:
             publish_name = "{}".format(self._project_name)
@@ -684,7 +686,7 @@ class AppDialog(QtGui.QWidget):
 
         #publish_name = "{}.png".format(publish_name)
 
-        logger.info("versionless publish name is: %s" % publish_name)
+        #logger.info("versionless publish name is: %s" % publish_name)
         return publish_name
 
     def _update_item_publish_versions(self):
@@ -712,8 +714,8 @@ class AppDialog(QtGui.QWidget):
         """
         itinialize item publish versions
         """
-        engine_name = sgtk.platform.current_engine().name
-        if engine_name == "tk-unreal":
+        #engine_name = sgtk.platform.current_engine().name
+        if self._engine_name == "tk-unreal":
             for item in self._publish_manager.tree.root_item.children:
                 self._create_versioned_publish(item, "")
 
@@ -842,8 +844,8 @@ class AppDialog(QtGui.QWidget):
 
             description = item.description
 
-            engine_name = sgtk.platform.current_engine().name
-            if engine_name == "tk-unreal":
+            #engine_name = sgtk.platform.current_engine().name
+            if self._engine_name == "tk-unreal":
                 token = ""
                 if "token" in item.properties:
                     token = item.properties["token"]
@@ -1765,8 +1767,7 @@ class AppDialog(QtGui.QWidget):
         """
         Show potential publish name widget in Unreal
         """
-        engine_name = sgtk.platform.current_engine().name
-        if engine_name == "tk-unreal":
+        if self._engine_name == "tk-unreal":
             self.ui.context_widget.display_publish_name()
 
     def _on_browse(self, folders=False):
