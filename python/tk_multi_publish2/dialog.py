@@ -146,6 +146,12 @@ class AppDialog(QtGui.QWidget):
             self._on_description_inherited_link_activated
         )
 
+        # Publish Token
+        engine_name = sgtk.platform.current_engine().name
+        if engine_name == "tk-unreal":
+            self.publish_token = self.ui.context_widget.ui.publish_token_display
+            self.publish_token.textChanged.connect(self._on_publish_token_change)
+
         # selection in tree view
         self.ui.items_tree.itemSelectionChanged.connect(
             self._update_details_from_selection
@@ -578,9 +584,15 @@ class AppDialog(QtGui.QWidget):
                 node_item.set_description(description)
                 self._set_description_inheritance_ui(node_item)
 
+    def _on_publish_token_change(self):
+        token = self.publish_token.text()
+
+        logger.info("token is : %s." % token)
+        self._current_item.properties["token"] = token
+
         engine_name = sgtk.platform.current_engine().name
         if engine_name == "tk-unreal":
-            self._create_versioned_publish(self._current_item, comments)
+            self._create_versioned_publish(self._current_item, token)
 
     def _create_versioned_publish(self, item, description):
         """
@@ -827,15 +839,19 @@ class AppDialog(QtGui.QWidget):
 
             # set the context
             self.ui.context_widget.set_context(item.context)
-            description = ""
-            if item.description:
-                description = item.description.toPlainText()
+
+            description = item.description
 
             engine_name = sgtk.platform.current_engine().name
             if engine_name == "tk-unreal":
-                self._create_versioned_publish(item, description)
-            #if "publish_name" in item.properties:
-            #    self.ui.context_widget.set_publish_name(item.properties["publish_name"])
+                token = ""
+                if "token" in item.properties:
+                    token = item.properties["token"]
+                    self.publish_token.setText(token)
+                else:
+                    self.publish_token.setText(token)
+
+                self._create_versioned_publish(item, token)
 
         else:
             self.ui.context_widget.hide()
