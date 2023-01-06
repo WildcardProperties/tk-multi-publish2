@@ -150,10 +150,13 @@ class AppDialog(QtGui.QWidget):
         )
 
         # Publish Token
-        if self._engine_name == "tk-unreal":
-            self.publish_token = self.ui.context_widget.ui.publish_token_display
-            self.publish_token.textChanged.connect(self._on_publish_token_change)
-            self.publish_token.editingFinished.connect(self._on_publish_token_finished)
+        #if self._engine_name == "tk-unreal":
+        self.token = ""
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self._display_version)
+        self.publish_token = self.ui.context_widget.ui.publish_token_display
+        self.publish_token.textChanged.connect(self._on_publish_token_change)
+        #self.publish_token.editingFinished.connect(self._on_publish_token_finished)
 
         # selection in tree view
         self.ui.items_tree.itemSelectionChanged.connect(
@@ -588,17 +591,19 @@ class AppDialog(QtGui.QWidget):
                 self._set_description_inheritance_ui(node_item)
 
     def _on_publish_token_change(self):
-        token = self.publish_token.text()
-        self._current_item.properties["token"] = token
-        if self._engine_name == "tk-unreal":
-            if len(token) % 3 == 0:
-                self._create_versioned_publish(self._current_item, token)
+        self.token = self.publish_token.text()
+        self._current_item.properties["token"] = self.token
+        #if self._engine_name == "tk-unreal":
+        self.timer.start(500)
 
     def _on_publish_token_finished(self):
-        token = self.publish_token.text()
-        self._current_item.properties["token"] = token
-        if self._engine_name == "tk-unreal":
-            self._create_versioned_publish(self._current_item, token)
+        self.token = self.publish_token.text()
+        self._current_item.properties["token"] = self.token
+        #if self._engine_name == "tk-unreal":
+        self.timer.start(500)
+
+    def _display_version(self):
+        self._create_versioned_publish(self._current_item, self.token)
 
     def _create_versioned_publish(self, item, description):
         """
@@ -715,9 +720,9 @@ class AppDialog(QtGui.QWidget):
         itinialize item publish versions
         """
         #engine_name = sgtk.platform.current_engine().name
-        if self._engine_name == "tk-unreal":
-            for item in self._publish_manager.tree.root_item.children:
-                self._create_versioned_publish(item, "")
+        #if self._engine_name == "tk-unreal":
+        for item in self._publish_manager.tree.root_item.children:
+            self._create_versioned_publish(item, "")
 
     def _on_description_inherited_link_activated(self, _link):
         """
@@ -845,15 +850,15 @@ class AppDialog(QtGui.QWidget):
             description = item.description
 
             #engine_name = sgtk.platform.current_engine().name
-            if self._engine_name == "tk-unreal":
-                token = ""
-                if "token" in item.properties:
-                    token = item.properties["token"]
-                    self.publish_token.setText(token)
-                else:
-                    self.publish_token.setText(token)
+            #if self._engine_name == "tk-unreal":
+            token = ""
+            if "token" in item.properties:
+                token = item.properties["token"]
+                self.publish_token.setText(token)
+            else:
+                self.publish_token.setText(token)
 
-                self._create_versioned_publish(item, token)
+            self._create_versioned_publish(item, token)
 
         else:
             self.ui.context_widget.hide()
@@ -1767,8 +1772,8 @@ class AppDialog(QtGui.QWidget):
         """
         Show potential publish name widget in Unreal
         """
-        if self._engine_name == "tk-unreal":
-            self.ui.context_widget.display_publish_name()
+        #if self._engine_name == "tk-unreal":
+        self.ui.context_widget.display_publish_name()
 
     def _on_browse(self, folders=False):
         """Opens a file dialog to browse to files for publishing."""
