@@ -81,7 +81,7 @@ def get_next_version(item, publish_name):
 
     publisher = sgtk.platform.current_bundle()
     prior_versions = publisher.shotgun.find("Version", filters, ['code'])
-    # logger.info("prior_versions: %s" % prior_versions)
+    #logger.info("prior_versions: %s" % prior_versions)
 
     regex = r"(" + re.escape(publish_name.split('.')[0]) + r"){1}(\.v\d)?\.\w*$"
 

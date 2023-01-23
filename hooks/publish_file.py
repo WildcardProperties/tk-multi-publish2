@@ -419,7 +419,7 @@ class BasicFilePublishPlugin(HookBaseClass):
                 }
             },
         )
-
+        
         # create the publish and stash it in the item properties for other
         # plugins to use.
         item.properties.sg_publish_data = sgtk.util.register_publish(**publish_data)
@@ -435,6 +435,7 @@ class BasicFilePublishPlugin(HookBaseClass):
                 }
             },
         )
+
 
     def finalize(self, settings, item):
         """

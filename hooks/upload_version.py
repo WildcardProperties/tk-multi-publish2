@@ -196,7 +196,7 @@ class UploadVersionPlugin(HookBaseClass):
             instances.
         :param item: Item to process
         """
-
+        """
         publisher = self.parent
         path = item.properties["path"]
 
@@ -214,7 +214,7 @@ class UploadVersionPlugin(HookBaseClass):
             publish_name = path_components["filename"]
 
         self.logger.debug("Publish name: %s" % (publish_name,))
-
+        """
         self.logger.info("Creating Version...")
         version_data = {
             "project": item.context.project,

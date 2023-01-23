@@ -76,6 +76,7 @@ class AppDialog(QtGui.QWidget):
         shotgun_globals.register_bg_task_manager(self._task_manager)
 
         self._bundle = sgtk.platform.current_bundle()
+        self._sg = self._bundle.shotgun
         self._validation_run = False
 
         # set up the UI
@@ -672,8 +673,22 @@ class AppDialog(QtGui.QWidget):
 
         project = context.project
         # logger.info("project is: %s" % project)
-        self._project_name = project["name"]
-        #logger.info("Project name: %s" % self._project_name)
+        id = project["id"]
+        name = project["name"]
+        self._project_name = name
+
+        try:
+            filters = [["id", "is", id]]
+            fields = ["code", "name", "id", "tank_name"]
+
+            result = self._sg.find_one("Project", filters, fields)
+            # logger.info("results are: %s" % result)
+            self._project_name = result["code"]
+            # logger.info("Project name: %s" % self._project_name)
+        except:
+            pass
+
+
         publish_name = ""
         if self._project_name:
             publish_name = "{}".format(self._project_name)
