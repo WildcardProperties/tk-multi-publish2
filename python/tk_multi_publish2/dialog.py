@@ -24,6 +24,8 @@ from .publish_tree_widget import TreeNodeItem, TreeNodeTask, TopLevelTreeNodeIte
 from .publish_screenshots import PublishScreenshots
 from . import util
 
+import os
+from os.path import expanduser
 
 # import frameworks
 settings = sgtk.platform.import_framework("tk-framework-shotgunutils", "settings")
@@ -57,7 +59,7 @@ class AppDialog(QtGui.QWidget):
         MULTI_EDIT_NOT_SUPPORTED,
     ) = range(4)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, file_list=None):
         """
         :param parent: The parent QWidget for this control
         """
@@ -79,6 +81,7 @@ class AppDialog(QtGui.QWidget):
         self._sg = self._bundle.shotgun
         self._validation_run = False
 
+        self._file_list = file_list
         # set up the UI
         self.ui = Ui_Dialog()
         self.ui.setupUi(self)
@@ -289,6 +292,10 @@ class AppDialog(QtGui.QWidget):
 
         # Display screenshots if they exist
         self._display_screenshots()
+
+        # Display Depot files
+        self._display_depot_files()
+
         self._display_publish_name()
 
         self.publish_dict = defaultdict()
@@ -1782,6 +1789,37 @@ class AppDialog(QtGui.QWidget):
         if paths:
             # simulate dropping the files into the dialog
             self._on_drop(paths)
+
+    def _display_depot_files(self):
+        """
+        Display depot files
+        """
+        logger.debug(">>>> Display Depot Files ...")
+        file_list = []
+        home_dir = expanduser("~")
+        self._home_dir = "{}/.publisher".format(home_dir)
+        publish_files_path = "{}/publish_files.txt".format(self._home_dir)
+
+        if not os.path.exists(publish_files_path):
+            return
+
+        with open(publish_files_path, 'r') as in_file:
+            line = in_file.readline()
+            while line:
+                line = in_file.readline()
+
+                line = line.rstrip()
+                line = line.replace("\\", "/")
+                logger.debug(">>>> line: {}".format(line))
+                #if os.path.exists(line):
+                logger.debug(">>>> Appending line: {}".format(line))
+                file_list.append(line)
+        in_file.close()
+        # os.remove(publish_files_path)
+        logger.debug(">>>> File list is: {}".format(file_list))
+        if file_list:
+            # simulate dropping the files into the dialog
+            self._on_drop(file_list)
 
     def _display_publish_name(self):
         """
