@@ -26,6 +26,7 @@ from . import util
 
 import os
 from os.path import expanduser
+import shutil
 
 # import frameworks
 settings = sgtk.platform.import_framework("tk-framework-shotgunutils", "settings")
@@ -291,7 +292,7 @@ class AppDialog(QtGui.QWidget):
         self._full_rebuild()
 
         # Display screenshots if they exist
-        self._display_screenshots()
+        # self._display_screenshots()
 
         # Display Depot files
         self._display_depot_files()
@@ -1794,11 +1795,12 @@ class AppDialog(QtGui.QWidget):
         """
         Display depot files
         """
-        logger.debug(">>>> Display Depot Files ...")
+        # logger.debug(">>>> Display Depot Files ...")
         file_list = []
         home_dir = expanduser("~")
         self._home_dir = "{}/.publisher".format(home_dir)
         publish_files_path = "{}/publish_files.txt".format(self._home_dir)
+        logger.debug(">>>> Publish files path: {}".format(publish_files_path))
 
         if not os.path.exists(publish_files_path):
             return
@@ -1810,12 +1812,14 @@ class AppDialog(QtGui.QWidget):
 
                 line = line.rstrip()
                 line = line.replace("\\", "/")
-                logger.debug(">>>> line: {}".format(line))
+                # logger.debug(">>>> line: {}".format(line))
                 #if os.path.exists(line):
-                logger.debug(">>>> Appending line: {}".format(line))
+                # logger.debug(">>>> Appending line: {}".format(line))
                 file_list.append(line)
         in_file.close()
-        # os.remove(publish_files_path)
+        backup_file = "{}/prev_publish_files_.txt".format(self._home_dir)
+        shutil.copy(publish_files_path, backup_file)
+        os.remove(publish_files_path)
         logger.debug(">>>> File list is: {}".format(file_list))
         if file_list:
             # simulate dropping the files into the dialog
