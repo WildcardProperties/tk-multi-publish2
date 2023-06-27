@@ -37,6 +37,11 @@ def _is_qt_pixmap_usable():
     if _qt_pixmap_is_usable is not None:
         return _qt_pixmap_is_usable
 
+    # Check first that current engine has UI
+    if not sgtk.platform.current_engine().has_ui:
+        _qt_pixmap_is_usable = False
+        return _qt_pixmap_is_usable
+
     try:
         # We can fail importing if the engine doesn't even support Qt.
         from sgtk.platform.qt import QtGui
@@ -387,16 +392,16 @@ class PublishItem(object):
         :returns: Path to a file on disk or None if no thumbnail set
         """
 
-        # nothing to do if running without a UI
-        if not sgtk.platform.current_engine().has_ui:
-            return None
-
         # the thumbnail path was explicitly provided
         if self._thumbnail_path:
             return self._thumbnail_path
 
         if self._current_temp_file_path:
             return self._current_temp_file_path
+
+        # nothing to do if running without a UI
+        if not sgtk.platform.current_engine().has_ui:
+            return None
 
         if self.thumbnail is None:
             return None
