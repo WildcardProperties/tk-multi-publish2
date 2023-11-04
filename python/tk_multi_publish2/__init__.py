@@ -16,7 +16,7 @@ from . import util  # noqa
 from . import publish_tree_widget  # noqa
 
 
-def show_dialog(app):
+def show_dialog(app, change=None):
     """
     Show the main dialog ui
 
@@ -29,7 +29,7 @@ def show_dialog(app):
 
     synclog = app.engine.sgtk.synchronize_filesystem_structure()
     app.log_debug(f"Synced Folders: {synclog}")
-
+    app._changelist = change
     if app.pre_publish_hook.validate():
         # start ui
         if app.modal:

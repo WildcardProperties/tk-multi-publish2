@@ -40,6 +40,8 @@ class MultiPublish2(sgtk.platform.Application):
         # make the base plugins available via the app
         self._base_hooks = tk_multi_publish2.base_hooks
 
+        self._changelist = None
+
         display_name = self.get_setting("display_name")
         # "Publish Render" ---> publish_render
         command_name = display_name.lower()
@@ -52,7 +54,7 @@ class MultiPublish2(sgtk.platform.Application):
         self.pre_publish_hook = self.create_hook_instance(pre_publish_hook_path)
 
         # register command
-        cb = lambda: tk_multi_publish2.show_dialog(self)
+        cb = lambda change=None : tk_multi_publish2.show_dialog(self,change)
         menu_caption = "%s..." % display_name
         menu_options = {
             "short_name": command_name,
@@ -113,6 +115,13 @@ class MultiPublish2(sgtk.platform.Application):
         Specifies that context changes are allowed.
         """
         return True
+    
+    @property
+    def changelist(self):
+        """
+        Specifies if we are evaluating a changelist instead of files.
+        """
+        return self._changelist   
 
     def create_publish_manager(self, publish_logger=None):
         """
