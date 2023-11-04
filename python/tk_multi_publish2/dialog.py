@@ -678,6 +678,9 @@ class AppDialog(QtGui.QWidget):
         """
         Create the versionless publish name
         """
+        if context == None:
+            current_engine = sgtk.platform.current_engine()
+            context = current_engine.context
 
         project = context.project
         # logger.info("project is: %s" % project)
@@ -695,7 +698,6 @@ class AppDialog(QtGui.QWidget):
             # logger.info("Project name: %s" % self._project_name)
         except:
             pass
-
 
         publish_name = ""
         if self._project_name:
