@@ -296,6 +296,9 @@ class AppDialog(QtGui.QWidget):
 
         # Display Depot files
         self._display_depot_files()
+        self._description_dict = {}
+        # self._display_publish_files_description()
+
 
         self._display_publish_name()
 
@@ -594,7 +597,7 @@ class AppDialog(QtGui.QWidget):
                     # The user has entered the description on this item so we no longer want to
                     # inherit (if it was before).
                     node_item.inherit_description = False
-
+                description = "test"
                 # This will set all child items that inherit descriptions to the same description.
                 node_item.set_description(description)
                 self._set_description_inheritance_ui(node_item)
@@ -800,6 +803,7 @@ class AppDialog(QtGui.QWidget):
         self.ui.item_icon.setPixmap(item.icon)
 
         self.ui.item_name.setText(item.name)
+        logger.info(">>>>>>>>>>>>>>>>>>>>> item.name is : %s." % item.name)
         self.ui.item_type.setText(item.type_display)
 
         # check the state of screenshot
@@ -824,16 +828,36 @@ class AppDialog(QtGui.QWidget):
 
         # Sets up the UI around the description based on the inheritance state
         self._set_description_inheritance_ui(tree_item)
-
+        description_dict = self._display_publish_files_description()
         if tree_item.inherit_description:
+            logger.debug(">>>>>>>>>>>>>>>> item.description 1 is : %s." % item.description)
             self.ui.item_comments.setText("")
             self.ui.item_comments.setPlaceholderText(item.description)
+            try:
+                if item.name and  description_dict:
+                    if item.name in description_dict:
+                        description = description_dict[item.name]
+                        logger.debug(">>>>>>>>>>>>>>>> setting description of item %s to %s." % (item.name, description))
+                        self.ui.item_comments.setText(description)
+            except Exception as e:
+                logger.debug(">>>>>>>>>>>>>>>> error in setting description of item: {}".format(e))
+
         else:
             # We are not inheriting the description so we should set the
             # text box to display the item's description, but we'll also look
             # up what the inherited description would be in case the user clears
             # the box, and it displays the placeholder text.
+
             self.ui.item_comments.setText(item.description)
+            try:
+                logger.debug(">>>>>>>>>>>>>>>> item.description 2 is : %s." % item.description)
+                if not item.description and item.name in description_dict:
+                    description = description_dict[item.name]
+
+                    logger.debug(">>>>>>>>>>>>>>>> setting description of item %s to %s." % (item.name, description))
+                    self.ui.item_comments.setText(description)
+            except Exception as e:
+                logger.debug(">>>>>>>>>>>>>>>> error in setting description of item: {}".format(e))
 
             inherited_desc = self._find_inherited_description(tree_item)
             self.ui.item_comments.setPlaceholderText(inherited_desc)
@@ -1792,6 +1816,44 @@ class AppDialog(QtGui.QWidget):
         if paths:
             # simulate dropping the files into the dialog
             self._on_drop(paths)
+
+    def _display_publish_files_description(self):
+        """
+        Display publish files description
+        """
+        description_dict = {}
+        try:
+            # logger.debug(">>>> Display Publish Files Description ...")
+            home_dir = expanduser("~")
+            self._home_dir = "{}/.publisher".format(home_dir)
+            publish_files_description_path = "{}/publish_files_description.txt".format(self._home_dir)
+            logger.debug(">>>> Publish files description path: {}".format(publish_files_description_path))
+
+            if not os.path.exists(publish_files_description_path):
+                return
+
+            with open(publish_files_description_path, 'r') as in_file:
+                for line in in_file:
+                    line = line.rstrip()
+                    logger.debug(">>>> line: {}".format(line))
+                    if ":::" in line:
+                        base_file, description = line.split(":::", 1)
+                        description_dict[base_file] = description
+                    else:
+                        # Handle lines without delimiter or skip
+                        # For example, you might want to log a warning or error
+                        logger.debug("Line without delimiter: {}".format(line))
+
+            # No need to explicitly close the file, as the 'with' statement handles it.
+
+            backup_file = "{}/prev_publish_files_description_.txt".format(self._home_dir)
+            shutil.copy(publish_files_description_path, backup_file)
+            os.remove(publish_files_description_path)
+        except Exception as e:
+            logger.error(">>>> Error reading publish files description: {}".format(e))
+
+        return description_dict
+
 
     def _display_depot_files(self):
         """
