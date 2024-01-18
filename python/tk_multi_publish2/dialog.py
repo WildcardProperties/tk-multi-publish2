@@ -597,7 +597,6 @@ class AppDialog(QtGui.QWidget):
                     # The user has entered the description on this item so we no longer want to
                     # inherit (if it was before).
                     node_item.inherit_description = False
-                description = "test"
                 # This will set all child items that inherit descriptions to the same description.
                 node_item.set_description(description)
                 self._set_description_inheritance_ui(node_item)
