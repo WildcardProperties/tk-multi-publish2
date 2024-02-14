@@ -48,6 +48,8 @@ class AppDialog(QtGui.QWidget):
     """
     Main dialog window for the App
     """
+    # Define a new signal for UI closure
+    ui_closed = QtCore.Signal()
 
     # main drag and drop areas
     (DRAG_SCREEN, PUBLISH_SCREEN) = range(2)
@@ -297,7 +299,7 @@ class AppDialog(QtGui.QWidget):
         # Display Depot files
         self._display_depot_files()
         self._description_dict = {}
-        # self._display_publish_files_description()
+        # self._get_publish_files_description()
 
 
         self._display_publish_name()
@@ -340,6 +342,12 @@ class AppDialog(QtGui.QWidget):
 
         # deallocate loggers
         self._progress_handler.shut_down()
+
+        # self.ui_closed.emit()  # Emit the signal when the UI is about to close
+        # super(AppDialog, self).closeEvent(event)
+
+        self._create_publisher_is_closed_file()
+        self._set_publisher_is_closed()
 
         try:
             # shut down main threadpool
@@ -827,11 +835,12 @@ class AppDialog(QtGui.QWidget):
 
         # Sets up the UI around the description based on the inheritance state
         self._set_description_inheritance_ui(tree_item)
-        description_dict = self._display_publish_files_description()
+        # description_dict = self._get_publish_files_description()
         if tree_item.inherit_description:
             logger.debug(">>>>>>>>>>>>>>>> item.description 1 is : %s." % item.description)
             self.ui.item_comments.setText("")
             self.ui.item_comments.setPlaceholderText(item.description)
+            """
             try:
                 if item.name and  description_dict:
                     if item.name in description_dict:
@@ -840,6 +849,7 @@ class AppDialog(QtGui.QWidget):
                         self.ui.item_comments.setText(description)
             except Exception as e:
                 logger.debug(">>>>>>>>>>>>>>>> error in setting description of item: {}".format(e))
+            """
 
         else:
             # We are not inheriting the description so we should set the
@@ -848,6 +858,7 @@ class AppDialog(QtGui.QWidget):
             # the box, and it displays the placeholder text.
 
             self.ui.item_comments.setText(item.description)
+            """
             try:
                 logger.debug(">>>>>>>>>>>>>>>> item.description 2 is : %s." % item.description)
                 if not item.description and item.name in description_dict:
@@ -857,6 +868,7 @@ class AppDialog(QtGui.QWidget):
                     self.ui.item_comments.setText(description)
             except Exception as e:
                 logger.debug(">>>>>>>>>>>>>>>> error in setting description of item: {}".format(e))
+            """
 
             inherited_desc = self._find_inherited_description(tree_item)
             self.ui.item_comments.setPlaceholderText(inherited_desc)
@@ -983,7 +995,11 @@ class AppDialog(QtGui.QWidget):
 
         self.ui.item_description_label.setText("Description for all items")
         self.ui.item_inherited_item_label.hide()
-        self.ui.item_comments.setText(self._summary_comment)
+        p4sg_description = self._get_description()
+        if p4sg_description:
+            self.ui.item_comments.setText(p4sg_description)
+        else:
+            self.ui.item_comments.setText(self._summary_comment)
         self.ui.item_comments.setPlaceholderText("")
 
         # the item_comments PublishDescriptionFocus won't display placeholder text if it is in focus
@@ -1040,6 +1056,28 @@ class AppDialog(QtGui.QWidget):
         (num_items, summary) = self.ui.items_tree.get_full_summary()
         self.ui.item_summary.setText(summary)
         self.ui.item_type.setText("%d tasks to execute" % num_items)
+
+    def _get_description(self):
+
+        """"
+        Get the description from the publish files
+        """
+        try:
+            description_dict = self._get_publish_files_description()
+
+            logger.debug(">>>>>>>>>>>>>>>> description_dict is : %s." % description_dict)
+            # get value of the first item in the dictionary
+
+            if description_dict:
+                for key, value in description_dict.items():
+                    logger.debug(">>>>>>>>>>>>>>>> description is : %s." % value)
+                    return value
+            else:
+                return ""
+        except Exception as e:
+            logger.debug(">>>>>>>>>>>>>>>> error in getting description: {}".format(e))
+            return ""
+
 
     def _full_rebuild(self):
         """
@@ -1816,7 +1854,27 @@ class AppDialog(QtGui.QWidget):
             # simulate dropping the files into the dialog
             self._on_drop(paths)
 
-    def _display_publish_files_description(self):
+    def _create_publisher_is_closed_file(self):
+        home_dir = expanduser("~")
+        self._home_dir = "{}/.publisher".format(home_dir)
+        if not os.path.exists(self._home_dir):
+            os.makedirs(self._home_dir)
+        self._publisher_is_closed = "{}/publisher_is_closed.txt".format(self._home_dir)
+
+
+    def _set_publisher_is_closed(self):
+        try:
+            logger.debug(">>>> Set publisher is closed to True...")
+            with open( self._publisher_is_closed, "w") as f:
+                msg = f"publish_file_is_closed:::True"
+                f.write(msg)
+                f.write("\n")
+
+        except Exception as e:
+            logger.debug("Error creating publisher is closed file {}".format(e))
+
+
+    def _get_publish_files_description(self):
         """
         Display publish files description
         """
@@ -1829,7 +1887,7 @@ class AppDialog(QtGui.QWidget):
             logger.debug(">>>> Publish files description path: {}".format(publish_files_description_path))
 
             if not os.path.exists(publish_files_description_path):
-                return
+                return None
 
             with open(publish_files_description_path, 'r') as in_file:
                 for line in in_file:
