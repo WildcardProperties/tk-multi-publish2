@@ -52,12 +52,13 @@ class UploadVersionPlugin(HookBaseClass):
         review_url = "https://www.shotgridsoftware.com/features/#review"
 
         return """
-        Upload the file to ShotGrid for review.<br><br>
+        Upload the file to Flow Production Tracking for review.<br><br>
 
-        A <b>Version</b> entry will be created in ShotGrid and a transcoded
-        copy of the file will be attached to it. The file can then be reviewed
-        via the project's <a href='%s'>Media</a> page, <a href='%s'>RV</a>, or
-        the <a href='%s'>ShotGrid Review</a> mobile app.
+        A <b>Version</b> entry will be created in Flow Production Tracking and
+        a transcoded copy of the file will be attached to it. The file can then
+        be reviewed via the project's <a href='%s'>Media</a> page,
+        <a href='%s'>RV</a>, or the <a href='%s'>Flow Production Tracking Review</a>
+        mobile app.
         """ % (
             media_page_url,
             review_url,
@@ -88,19 +89,18 @@ class UploadVersionPlugin(HookBaseClass):
         return {
             "File Extensions": {
                 "type": "str",
-                #"default": "jpeg, jpg, png, mov, mp4, pdf",
-                "default": "jpeg, jpg, png, mov, mp4, pdf, ma, fbx, FBX",
+                "default": "jpeg, jpg, png, mov, mp4, pdf",
                 "description": "File Extensions of files to include",
             },
             "Upload": {
                 "type": "bool",
                 "default": True,
-                "description": "Upload content to ShotGrid?",
+                "description": "Upload content to Flow Production Tracking?",
             },
             "Link Local File": {
                 "type": "bool",
                 "default": True,
-                "description": "Should the local file be referenced by ShotGrid",
+                "description": "Should the local file be referenced by Flow Production Tracking",
             },
         }
 
@@ -115,7 +115,7 @@ class UploadVersionPlugin(HookBaseClass):
         """
 
         # we use "video" since that's the mimetype category.
-        return ["file.image", "file.video"]
+        return ["file.image", "file.pdf", "file.video"]
 
     def accept(self, settings, item):
         """
@@ -197,7 +197,7 @@ class UploadVersionPlugin(HookBaseClass):
             instances.
         :param item: Item to process
         """
-        """
+
         publisher = self.parent
         path = item.properties["path"]
 
@@ -215,7 +215,7 @@ class UploadVersionPlugin(HookBaseClass):
             publish_name = path_components["filename"]
 
         self.logger.debug("Publish name: %s" % (publish_name,))
-        """
+
         self.logger.info("Creating Version...")
         version_data = {
             "project": item.context.project,
@@ -293,7 +293,7 @@ class UploadVersionPlugin(HookBaseClass):
             extra={
                 "action_show_in_shotgun": {
                     "label": "Show Version",
-                    "tooltip": "Reveal the version in ShotGrid.",
+                    "tooltip": "Reveal the version in Flow Production Tracking.",
                     "entity": version,
                 }
             },

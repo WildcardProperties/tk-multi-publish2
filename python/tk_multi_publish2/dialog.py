@@ -99,8 +99,8 @@ class AppDialog(QtGui.QWidget):
         # tooltips for the task and link inputs
         self.ui.context_widget.set_task_tooltip(
             "<p>The task that the selected item will be associated with "
-            "in ShotGrid after publishing. It is recommended to always "
-            "fill out the Task field when publishing. The menu button "
+            "in Flow Production Tracking after publishing. It is recommended "
+            "to always fill out the Task field when publishing. The menu button "
             "to the right will provide suggestions for Tasks to publish "
             "including the Tasks assigned to you, recently used Tasks, "
             "and Tasks related to the entity Link populated in the field "
@@ -108,9 +108,9 @@ class AppDialog(QtGui.QWidget):
         )
         self.ui.context_widget.set_link_tooltip(
             "<p>The entity that the selected item will be associated with "
-            "in ShotGrid after publishing. By selecting a Task in the field "
-            "above, the Link will automatically be populated. It is "
-            "recommended that you always populate the Task field when "
+            "in Flow Production Tracking after publishing. By selecting a "
+            "Task in the field above, the Link will automatically be populated. "
+            "It is recommended that you always populate the Task field when "
             "publishing. The Task menu above will display any tasks associated "
             "with the entity populated in this field.</p>"
         )
@@ -174,7 +174,7 @@ class AppDialog(QtGui.QWidget):
         self.ui.items_tree.checked.connect(self._update_details_from_selection)
 
         # thumbnails
-        self.ui.item_thumbnail.screen_grabbed.connect(self._update_item_thumbnail)
+        self.ui.item_thumbnail.thumbnail_changed.connect(self._update_item_thumbnail)
 
         # tool buttons
         self.ui.delete_items.clicked.connect(self._delete_selected)
@@ -353,7 +353,9 @@ class AppDialog(QtGui.QWidget):
             # shut down main threadpool
             self._task_manager.shut_down()
         except Exception:
-            logger.exception("Error running ShotGrid Panel App closeEvent()")
+            logger.exception(
+                "Error running Flow Production Tracking Panel App closeEvent()"
+            )
 
         # ensure the context widget's recent contexts are saved
         self.ui.context_widget.save_recent_contexts()
@@ -605,6 +607,7 @@ class AppDialog(QtGui.QWidget):
                     # The user has entered the description on this item so we no longer want to
                     # inherit (if it was before).
                     node_item.inherit_description = False
+
                 # This will set all child items that inherit descriptions to the same description.
                 node_item.set_description(description)
                 self._set_description_inheritance_ui(node_item)
@@ -810,7 +813,7 @@ class AppDialog(QtGui.QWidget):
         self.ui.item_icon.setPixmap(item.icon)
 
         self.ui.item_name.setText(item.name)
-        logger.info(">>>>>>>>>>>>>>>>>>>>> item.name is : %s." % item.name)
+        # logger.info(">>>>>>>>>>>>>>>>>>>>> item.name is : %s." % item.name)
         self.ui.item_type.setText(item.type_display)
 
         # check the state of screenshot

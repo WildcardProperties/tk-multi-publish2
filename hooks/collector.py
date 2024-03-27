@@ -11,6 +11,7 @@
 import mimetypes
 import os
 import sgtk
+from tank import TankError
 from tank_vendor import six
 
 HookBaseClass = sgtk.get_hook_baseclass()
@@ -138,7 +139,7 @@ class BasicSceneCollector(HookBaseClass):
                 "PDF": {
                     "extensions": ["pdf"],
                     "icon": self._get_icon_path("file.png"),
-                    "item_type": "file.image",
+                    "item_type": "file.pdf",
                 },
             }
 
@@ -241,6 +242,26 @@ class BasicSceneCollector(HookBaseClass):
 
             # disable thumbnail creation since we get it for free
             file_item.thumbnail_enabled = False
+        else:
+            # Try to generate a thumbnail from the file
+            try:
+                file_item.thumbnail = publisher.util.get_thumbnail(
+                    path, file_item.context
+                )
+            except TankError as tank_error:
+                self.logger.error(
+                    "Failed to generate thumbnail for {path}. Error {tank_error}".format(
+                        path=path,
+                        tank_error=tank_error,
+                    )
+                )
+            except Exception as error:
+                self.logger.error(
+                    "Unexepcted error occured while attempting to generate thumbnail for {path}. Error {error}".format(
+                        error=error,
+                        path=path,
+                    )
+                )
 
         # all we know about the file is its path. set the path in its
         # properties for the plugins to use for processing.

@@ -304,13 +304,13 @@ def get_version_number(path):
 
 def get_conflicting_publishes(context, path, publish_name, filters=None):
     """
-    Returns a list of SG published file dicts for any existing publishes that
+    Returns a list of PTR published file dicts for any existing publishes that
     match the supplied context, path, and publish_name.
 
     :param context: The context to search publishes for
     :param path: The path to match against previous publishes
     :param publish_name: The name of the publish.
-    :param filters: A list of additional SG find() filters to apply to the
+    :param filters: A list of additional PTR find() filters to apply to the
         publish search.
 
     :return: A list of ``dict``s representing existing publishes that match
@@ -333,7 +333,7 @@ def get_conflicting_publishes(context, path, publish_name, filters=None):
     # a workaround for our inability to filter publishes by path. so for now,
     # get a dictionary of data that would be used to create a matching publish
     # and use that to get publishes via a call to find(). Then we'll filter
-    # those by their path field. Once we have the ability in SG to filter by
+    # those by their path field. Once we have the ability in PTR to filter by
     # path, we can replace this whole method with a simple call to find().
     publish_data = sgtk.util.register_publish(
         publisher.sgtk, context, path, publish_name, version_number=None, dry_run=True
@@ -375,7 +375,7 @@ def clear_status_for_conflicting_publishes(context, publish_data):
 
     The loader app respects the status of publishes to determine which are
     available for the user to load in their DCC. Because it is possible to
-    create a version entry in SG with the same path multiple times, this method
+    create a version entry in PTR with the same path multiple times, this method
     provides an easy way to clear the status of previous publishes for a given
     path.
 
@@ -428,3 +428,25 @@ def clear_status_for_conflicting_publishes(context, publish_data):
 
         # execute all the updates!
         publisher.shotgun.batch(batch_data)
+
+
+def get_thumbnail(path, context):
+    """
+    Given a path and context, attempt to automatically generate a thumbnail.
+
+    :param path: The path to generate a thumbnail from.
+    :param context: The context to help determine engine software locations in order to
+        discover thumbnail extraction tools.
+
+    :return: The generated thumbnail.
+    :rtype: QtGui.QPixmap
+    """
+
+    # the logic for this method lives in a hook that can be overridden by
+    # clients. exposing the method here in the publish utils api prevents
+    # clients from having to call other hooks directly in their
+    # collector/publisher hook implementations.
+    publisher = sgtk.platform.current_bundle()
+    return publisher.execute_hook_method(
+        "thumbnail_generator", "generate_thumbnail", input_path=path, context=context
+    )
