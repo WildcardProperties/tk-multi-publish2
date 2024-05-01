@@ -360,6 +360,10 @@ class AppDialog(QtGui.QWidget):
         # ensure the context widget's recent contexts are saved
         self.ui.context_widget.save_recent_contexts()
 
+        # Write to the file that the GUI is closed
+
+
+
     def _update_details_from_selection(self):
         """
         Makes sure that the right hand side details section reflects the selected item in the left
@@ -1869,7 +1873,7 @@ class AppDialog(QtGui.QWidget):
         try:
             logger.debug(">>>> Set publisher is closed to True...")
             with open( self._publisher_is_closed, "w") as f:
-                msg = f"publish_file_is_closed:::True"
+                msg = f"GUI_IS_CLOSED"
                 f.write(msg)
                 f.write("\n")
 
