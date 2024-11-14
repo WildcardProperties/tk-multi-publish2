@@ -14,6 +14,7 @@ import traceback
 
 import sgtk
 from sgtk.util.filesystem import copy_file, ensure_folder_exists
+from tank.errors import TankError
 
 HookBaseClass = sgtk.get_hook_baseclass()
 
@@ -57,21 +58,21 @@ class BasicFilePublishPlugin(HookBaseClass):
             copied prior to publishing. If not specified, "path" will be
             published in place.
 
-        publish_type - If set, will be supplied to SG as the publish type when
+        publish_type - If set, will be supplied to PTR as the publish type when
             registering "path" as a new publish. If not set, will be determined
             via the plugin's "File Type" setting.
 
-        publish_path - If set, will be supplied to SG as the publish path when
+        publish_path - If set, will be supplied to PTR as the publish path when
             registering the new publish. If not set, will be determined by the
             "published_file" property if available, falling back to publishing
             "path" in place.
 
-        publish_name - If set, will be supplied to SG as the publish name when
+        publish_name - If set, will be supplied to PTR as the publish name when
             registering the new publish. If not available, will be determined
             by the "work_template" property if available, falling back to the
             ``path_info`` hook logic.
 
-        publish_version - If set, will be supplied to SG as the publish version
+        publish_version - If set, will be supplied to PTR as the publish version
             when registering the new publish. If not available, will be
             determined by the "work_template" property if available, falling
             back to the ``path_info`` hook logic.
@@ -80,7 +81,7 @@ class BasicFilePublishPlugin(HookBaseClass):
             registering the publish. If the item's parent has been published,
             it's path will be appended to this list.
 
-        publish_user - If set, will be supplied to SG as the publish user
+        publish_user - If set, will be supplied to PTR as the publish user
             when registering the new publish. If not available, the publishing
             will fall back to the :meth:`tank.util.register_publish` logic.
 
@@ -130,7 +131,7 @@ class BasicFilePublishPlugin(HookBaseClass):
         """
         One line display name describing the plugin
         """
-        return "Publish to ShotGrid"
+        return "Publish to Flow Production Tracking"
 
     @property
     def description(self):
@@ -142,16 +143,17 @@ class BasicFilePublishPlugin(HookBaseClass):
         loader_url = "https://help.autodesk.com/view/SGDEV/ENU/?contextId=PC_APP_LOADER"
 
         return """
-        Publishes the file to ShotGrid. A <b>Publish</b> entry will be
-        created in ShotGrid which will include a reference to the file's current
-        path on disk. Other users will be able to access the published file via
-        the <b><a href='%s'>Loader</a></b> so long as they have access to
-        the file's location on disk.
+        Publishes the file to Flow Production Tracking. A <b>Publish</b> entry
+        will be created in Flow Production Tracking which will include a reference
+        to the file's current path on disk. Other users will be able to access the
+        published file via the <b><a href='%s'>Loader</a></b> so long as they have
+        access to the file's location on disk.
 
         <h3>File versioning</h3>
         The <code>version</code> field of the resulting <b>Publish</b> in
-        ShotGrid will also reflect the version number identified in the filename.
-        The basic worklfow recognizes the following version formats by default:
+        Flow Production Tracking will also reflect the version number identified in
+        the filename. The basic worklfow recognizes the following version formats by
+        default:
 
         <ul>
         <li><code>filename.v###.ext</code></li>
@@ -206,13 +208,14 @@ class BasicFilePublishPlugin(HookBaseClass):
                     ["Texture", "tiff", "tx", "tga", "dds"],
                     ["Image", "jpeg", "jpg", "png"],
                     ["Movie", "mov", "mp4"],
+                    ["ICEM", "edf"],
                     ["PDF", "pdf"],
                 ],
                 "description": (
                     "List of file types to include. Each entry in the list "
-                    "is a list in which the first entry is the ShotGrid "
-                    "published file type and subsequent entries are file "
-                    "extensions that should be associated."
+                    "is a list in which the first entry is the "
+                    "Flow Production Tracking published file type and subsequent"
+                    " entries are file extensions that should be associated."
                 ),
             },
         }
@@ -318,13 +321,13 @@ class BasicFilePublishPlugin(HookBaseClass):
 
             if "work_template" in item.properties or publish_template:
 
-                # templates are in play and there is already a publish in SG
+                # templates are in play and there is already a publish in PTR
                 # for this file path. We will raise here to prevent this from
                 # happening.
                 error_msg = (
                     "Can not validate file path. There is already a publish in "
-                    "ShotGrid that matches this path. Please uncheck this "
-                    "plugin or save the file to a different path."
+                    "Flow Production Tracking that matches this path. Please "
+                    "uncheck this plugin or save the file to a different path."
                 )
                 self.logger.error(error_msg)
                 raise Exception(error_msg)
@@ -336,17 +339,20 @@ class BasicFilePublishPlugin(HookBaseClass):
                     "<pre>%s</pre>" % (pprint.pformat(publishes),)
                 )
                 self.logger.warn(
-                    "Found %s conflicting publishes in ShotGrid" % (len(publishes),),
+                    "Found %s conflicting publishes in Flow Production Tracking"
+                    % (len(publishes),),
                     extra={
                         "action_show_more_info": {
                             "label": "Show Conflicts",
-                            "tooltip": "Show conflicting publishes in ShotGrid",
+                            "tooltip": "Show conflicting publishes in Flow Production Tracking",
                             "text": conflict_info,
                         }
                     },
                 )
 
-        self.logger.info("A Publish will be created in ShotGrid and linked to:")
+        self.logger.info(
+            "A Publish will be created in Flow Production Tracking and linked to:"
+        )
         self.logger.info("  %s" % (path,))
 
         return True
@@ -388,7 +394,7 @@ class BasicFilePublishPlugin(HookBaseClass):
             )
 
         # handle copying of work to publish if templates are in play
-        self._copy_work_to_publish(settings, item)
+        self._copy_to_publish(settings, item)
 
         # arguments for publish registration
         self.logger.info("Registering publish...")
@@ -427,11 +433,11 @@ class BasicFilePublishPlugin(HookBaseClass):
         item.properties.sg_publish_data = sgtk.util.register_publish(**publish_data)
         self.logger.info("Publish registered!")
         self.logger.debug(
-            "ShotGrid Publish data...",
+            "Flow Production Tracking Publish data...",
             extra={
                 "action_show_more_info": {
-                    "label": "ShotGrid Publish Data",
-                    "tooltip": "Show the complete ShotGrid Publish Entity dictionary",
+                    "label": "Flow Production Tracking Publish Data",
+                    "tooltip": "Show the complete Flow Production Tracking Publish Entity dictionary",
                     "text": "<pre>%s</pre>"
                     % (pprint.pformat(item.properties.sg_publish_data),),
                 }
@@ -452,7 +458,7 @@ class BasicFilePublishPlugin(HookBaseClass):
 
         publisher = self.parent
 
-        # get the data for the publish that was just created in SG
+        # get the data for the publish that was just created in PTR
         publish_data = item.properties.sg_publish_data
 
         # ensure conflicting publishes have their status cleared
@@ -470,7 +476,7 @@ class BasicFilePublishPlugin(HookBaseClass):
             extra={
                 "action_show_in_shotgun": {
                     "label": "Show Publish",
-                    "tooltip": "Open the Publish in ShotGrid.",
+                    "tooltip": "Open the Publish in Flow Production Tracking.",
                     "entity": publish_data,
                 }
             },
@@ -487,7 +493,18 @@ class BasicFilePublishPlugin(HookBaseClass):
             None if no template could be identified.
         """
 
-        return item.get_property("publish_template")
+        publish_template = item.get_property("publish_template")
+        if publish_template:
+            return publish_template
+
+        publish_templates_by_file_type = item.get_property("publish_templates")
+        if not publish_templates_by_file_type:
+            return None
+        publish_type = self.get_publish_type(settings, item)
+        publish_template_name = publish_templates_by_file_type.get(publish_type)
+        if not publish_template_name:
+            return None
+        return self.parent.engine.get_template_by_name(publish_template_name)
 
     def get_publish_type(self, settings, item):
         """
@@ -589,6 +606,56 @@ class BasicFilePublishPlugin(HookBaseClass):
                     "Used publish template to determine the publish path: %s"
                     % (publish_path,)
                 )
+        elif publish_template:
+            # Build the publish path using the item context, without a work template
+            context = item.context
+            # First, try to get the template fields from the selected context. If no folder has
+            # been created on disk, this logic will fail as the cache will be empty. We have to
+            # find another solution to get the template keys from the current context
+            try:
+                fields = context.as_template_fields(publish_template, validate=True)
+            except TankError:
+                ctx_entity = context.task or context.entity or context.project
+                self.parent.sgtk.create_filesystem_structure(
+                    ctx_entity["type"], ctx_entity["id"]
+                )
+                fields = context.as_template_fields(publish_template, validate=True)
+
+            # Check if the template is misisng any required fields. If so, try to fill the
+            # missing keys data
+            missing_keys = publish_template.missing_keys(fields)
+            if missing_keys:
+                self.__get_template_missing_keys(settings, item, fields, missing_keys)
+            if missing_keys:
+                self.logger.warning(
+                    "Missing data fields (%s) for publish template (%s)"
+                    % (fields, publish_template)
+                )
+                if not context.task:
+                    self.logger.warning(
+                        "Selecting a Task may resolve the missing template fields"
+                    )
+                if not context.entity:
+                    self.logger.warning(
+                        "Selecting a Link entity may resolve the missing template fields"
+                    )
+                return
+
+            # Get the publish path based on the template fields data
+            publish_path = publish_template.apply_fields(fields)
+            publish_name = self.get_publish_name(settings, item)
+            while self.parent.util.get_conflicting_publishes(
+                item.context, publish_path, publish_name
+            ):
+                # Get the next version to publish to and rebuild the publish path
+                fields["version"] = fields["version"] + 1
+                publish_path = publish_template.apply_fields(fields)
+
+            # Set the item property based on the publish template data
+            publish_version_name, _ = os.path.splitext(os.path.basename(publish_path))
+            item.properties["publish_version_name"] = publish_version_name
+            item.properties["publish_version"] = fields["version"]
+
         else:
             self.logger.debug("publish_template: %s" % publish_template)
             self.logger.debug("work_template: %s" % work_template)
@@ -686,7 +753,7 @@ class BasicFilePublishPlugin(HookBaseClass):
         :param item: The item to determine the publish template for
 
         :return: A list of file paths representing the dependencies to store in
-            SG for this publish
+            PTR for this publish
         """
 
         # local properties first
@@ -755,6 +822,47 @@ class BasicFilePublishPlugin(HookBaseClass):
 
     ############################################################################
     # protected methods
+
+    def _copy_to_publish(self, settings, item):
+        """
+        Copy the item file to the publish location.
+
+        :param settings: This plugin instance's configured settings.
+        :param item: The item containing the file to copy.
+        """
+
+        work_template = item.properties.get("work_template")
+        if work_template:
+            self._copy_work_to_publish(settings, item)
+        else:
+            self._copy_local_to_publish(settings, item)
+
+    def _copy_local_to_publish(self, settings, item):
+        """
+        Copy the item from the local file path to the publish tempalte path.
+
+        This method does not use a work template, instead it tries to determine
+        the publish path based on the item's context.
+
+        :param settings: This plugin instance's configured settings
+        :param item: The item to determine the publish template for
+        """
+
+        path = item.get_property("path")
+        if not path:
+            return
+
+        publish_path = self.get_publish_path(settings, item)
+        if path != publish_path:
+            try:
+                publish_folder = os.path.dirname(publish_path)
+                ensure_folder_exists(publish_folder)
+                copy_file(path, publish_path)
+            except Exception:
+                raise Exception(
+                    "Failed to copy local file from '%s' to '%s'.\n%s"
+                    % (path, publish_path, traceback.format_exc())
+                )
 
     def _copy_work_to_publish(self, settings, item):
         """
@@ -950,3 +1058,37 @@ class BasicFilePublishPlugin(HookBaseClass):
         self.logger.info("File saved as: %s" % (next_version_path,))
 
         return next_version_path
+
+    def __get_template_missing_keys(self, settings, item, fields, missing_keys):
+        """
+        Attempt to update the given fields dictionary with data for the missing keys.
+
+        The method will modify the fields dictionary in place to add the missing data,
+        and will modify the missing_keys list in place to remove the keys that were
+        found.
+
+        :param settings: This plugin instance's configured settings
+        :param item: The item to determine the publish path for
+        :param fields: The templates fields data
+        :param missing_keys: The list of missing fields keys
+        """
+
+        # First try to extract the file name and extension from the path
+        path = item.get_property("path")
+        filename = os.path.basename(path)
+        name, file_extension = os.path.splitext(filename)
+        file_extension = file_extension[1:]
+
+        if "version" in missing_keys:
+            # Default to version 1. On generating the template path, check for
+            # conflicting publishes and version up accordingly
+            fields["version"] = 1
+            missing_keys.remove("version")
+
+        if "name" in missing_keys and name:
+            fields["name"] = name
+            missing_keys.remove("name")
+
+        if "extension" in missing_keys and file_extension:
+            fields["extension"] = file_extension
+            missing_keys.remove("extension")
